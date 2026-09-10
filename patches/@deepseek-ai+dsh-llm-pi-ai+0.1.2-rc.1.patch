@@ -1,8 +1,8 @@
 diff --git a/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js b/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
-index 5c89b80..193f5b7 100644
+index c25e5c7..f70e3a4 100644
 --- a/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
 +++ b/node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js
-@@ -1278,8 +1278,9 @@ function mapUsage(usage) {
+@@ -1289,8 +1289,9 @@ function mapUsage(usage) {
  	};
  }
  function classifyPiAiError(message) {
@@ -13,3 +13,21 @@ index 5c89b80..193f5b7 100644
  	if (/\b429\b|rate.?limit/i.test(message)) return "RATE_LIMIT";
  	if (/\b413\b|failed to buffer the request body:\s*length limit exceeded|payload too large|request body too large/i.test(message)) return "INVALID_REQUEST";
  	if (/\b400\b|invalid.?request/i.test(message)) return "INVALID_REQUEST";
+@@ -1462,7 +1463,16 @@ async function* toStreamChunks(events, contextWindow, callerSignal) {
+ 					type: "tool-call",
+ 					id: brandString(event.toolCall.id),
+ 					name: event.toolCall.name,
+-					arguments: JSON.stringify(event.toolCall.arguments)
++					arguments: JSON.stringify((function () {
++						const a = event.toolCall.arguments;
++						if (a !== null && typeof a === "object" && !Array.isArray(a)) {
++							const nullKeys = Object.keys(a).filter(function (k) { return a[k] === null; });
++							if (nullKeys.length > 0) console.error("[dsh-desktop] 剔除模型传的 null 可选参数: " + nullKeys.join(", ") + " (tool=" + event.toolCall.name + ")");
++							return Object.fromEntries(Object.entries(a).filter(function (e) { return e[1] !== null; }));
++						}
++						console.error("[dsh-desktop] tool arguments 非对象: typeof=" + typeof a + " (tool=" + event.toolCall.name + ")");
++						return a;
++					})())
+ 				}
+ 			};
+ 			break;
