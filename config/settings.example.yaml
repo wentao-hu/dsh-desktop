@@ -1,0 +1,54 @@
+# DSH Desktop 本地配置模板（模型路由 + 默认模型 + 界面偏好）
+#
+# 用途：换电脑后把本文件复制到 DSH_HOME 下、改名为 settings.yaml 即可恢复模型配置。
+#
+#   DSH_HOME = ~/Library/Application Support/dsh-desktop-dev/harness/
+#   cp config/settings.example.yaml "$HOME/Library/Application Support/dsh-desktop-dev/harness/settings.yaml"
+#
+# 本文件不含任何密钥：API Key 通过 apiKeyEnv 引用环境变量，变量的值写在 ~/.zshrc。
+# 完整换机流程见 docs/换机恢复指南.md
+
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+
+# ===== 公司 AIGC 网关的 responses 路由 =====
+llm-pi-ai:
+  providers:
+    sankuai:
+      displayName: Sankuai AIGC
+      api: openai-responses
+      baseURL: https://aigc.sankuai.com/agentic/v1
+      apiKeyEnv: SANKUAI_API_KEY
+      models:
+        - id: deepseek-v4.1-flash-expires-on-0910
+          name: DeepSeek V4.1 Flash
+          contextWindow: 1000000   # 上下文窗口 1M（注意不要和 maxTokens 混淆）
+          maxTokens: 393216        # 输出上限；网关实测范围为 [1, 393216]
+          input:                   # 多模态声明；不声明图片会在发往模型前被 harness 拒绝
+            - text
+            - image
+          reasoningEfforts:        # harness 档位名 → 网关接受的 wire 值
+            "off": none            # ⚠️ off 必须加引号：YAML 1.1 会把裸 off 解析成布尔 false
+            minimal: minimal
+            low: low
+            medium: medium
+            high: high
+            max: max
+
+# 新建会话的默认模型。不设此项会退回 deepseek-official（需要 DeepSeek 官方 key）
+agent-default-model:
+  provider: sankuai
+  model: deepseek-v4.1-flash-expires-on-0910
+  reasoningEffort: max
+
+ui-theme:
+  preference: light
+  fontSize: 15
+
+# 权限预设。
+# ⚠️ 设为 danger-full-access（最高档）后，模型一旦尝试提权就会报
+#    "sandbox escalation to ... is not strictly wider than this call's current ... mode"
+#    这是上游的 fail-closed 设计（提权必须严格更宽），不是缺陷。
+#    想要避免该报错，改成 workspace-write。
+permission:
+  defaultPreset: danger-full-access
